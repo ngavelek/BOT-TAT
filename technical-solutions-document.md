@@ -32,20 +32,20 @@ All diagrams are in Mermaid.
 
 ```mermaid
 flowchart TD
-    A[Email Notifications<br>(Indicators Only)] --> B[Inbox Tracking<br>Do NOT treat as claims]
-    C[FTP Claim Files<br>(Source of Truth)] --> D[Assignment Job<br>Extract & Count Files]
-    D --> E[Assign FileID + T0]
-    E --> F[Move Files to BOT Action Folder<br>Assign T1]
+    A[Email Notifications (Indicators Only)] --> B[Inbox Tracking - Not Claims]
+    C[FTP Claim Files (Source of Truth)] --> D[Assignment Job - Extract and Count Files]
+    D --> E[Assign FileID and T0]
+    E --> F[Move Files to BOT Action Folder - Assign T1]
     F --> G[BOT Overnight Processing]
-    G --> H[BOT Morning Report<br>Completed | Exceptions | Pending]
-    
-    H --> I[Completed Files<br>Move related emails to Completed Folder<br>Assign T2]
-    H --> J[Business Exceptions<br>Keep emails in Inbox<br>Assign T2]
-    H --> K[Pending<br>No movement]
-    
-    I --> L[CMS Intake Validation<br>Assign T3]
+    G --> H[BOT Morning Report: Completed / Exceptions / Pending]
+
+    H --> I[Completed Files - Move Emails to Completed - Assign T2]
+    H --> J[Business Exceptions - Keep Emails in Inbox - Assign T2]
+    H --> K[Pending - No Movement]
+
+    I --> L[CMS Intake Validation - Assign T3]
     J --> L
-    L --> M[Final TAT + Accurate Counts]
+    L --> M[Final TAT and Accurate Counts]
 ```
 
 ---
