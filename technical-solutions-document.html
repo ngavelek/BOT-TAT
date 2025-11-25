@@ -102,17 +102,24 @@
     <div class="container">
         <h1>🧩 TECHNICAL SOLUTIONS DOCUMENT</h1>
         <h2>End-to-End Claim Tracking + True TAT + Accurate Counts</h2>
+        <h3>Multi-Source Claims Processing: FTP, Email & BOT Workflow Integration</h3>
         <p><strong>Version 1.0</strong></p>
 
         <hr>
 
         <h2>1. Executive Summary</h2>
-        <p>Sun Life receives:</p>
+        <p>Sun Life receives claim files from 6 administrators via two methods:</p>
         <ul>
-            <li><strong>Email notifications</strong> from 6 administrators</li>
-            <li><strong>Claim files via FTP</strong>, which contain the actual claims</li>
+            <li><strong>FTP claim files</strong> from 5 administrators (UMR, Meritain, Aetna, Anthem, Glenavon)</li>
+            <li><strong>Email claim files</strong> from 1 administrator (Cigna only)</li>
+            <li><strong>Email notifications</strong> from all 6 administrators (notifications only, not actual claims except for Cigna)</li>
         </ul>
-        <p><strong>Current issues</strong> (inaccuracy, exceptions lost, wrong counts) arise because email notifications are being treated as claims.</p>
+        <p><strong>Current issues</strong> (inaccuracy, exceptions lost, wrong counts) arise because:</p>
+        <ul>
+            <li>Email notifications are being treated as claims and moved to "Completed" folder before BOT processing</li>
+            <li>When BOT returns exceptions, those emails are already marked as completed</li>
+            <li>This creates phantom "completed" counts that don't match actual claim processing</li>
+        </ul>
         <p>This document provides a fully accurate, auditable system for:</p>
         <ul>
             <li>Tracking the true number of claims received</li>
@@ -127,12 +134,14 @@
 
         <h2>2. Core Understandings</h2>
         <ul>
-            <li>Emails are notifications, not claims</li>
-            <li>FTP files are the true source of claims</li>
+            <li>Email notifications are NOT claims (except for Cigna)</li>
+            <li>FTP files are the source of claims for 5 administrators</li>
+            <li>Cigna is the only administrator that sends claim files via email attachments</li>
             <li>BOT results dictate Completed vs. Exception</li>
-            <li>Email movement must happen AFTER the BOT report</li>
+            <li>Email movement must happen AFTER the BOT report (critical for accuracy)</li>
             <li>Meritain ZIP files must be expanded and tracked individually</li>
             <li>TAT requires full lifecycle timestamps (T0 → T3)</li>
+            <li>No standard file naming convention across administrators - unique 10-digit hash will ensure tracking</li>
         </ul>
 
         <hr>
@@ -180,78 +189,132 @@
         <h2>4. High-Level System Overview</h2>
         <div class="mermaid">
 flowchart TD
-    A["Email Notifications<br>(Indicators Only)"] --> B["Inbox Tracking<br>Do NOT treat as claims"]
-    C["FTP Claim Files<br>(Source of Truth)"] --> D["Assignment Job<br>Extract & Count Files"]
-    D --> E[Assign FileID + T0]
-    E --> F["Move Files to BOT Action Folder<br>Assign T1"]
+    A[Email Notifications<br/>5 Administrators<br/>Indicators Only] --> B[Inbox Tracking<br/>Do NOT treat as claims]
+    C[FTP Claim Files<br/>5 Administrators<br/>Source of Truth] --> D[Assignment Job<br/>Extract and Count Files]
+    C2[Email Claim Files<br/>Cigna Only<br/>Extract from Email] --> D
+    
+    D --> E[Assign FileID plus T0<br/>10-Digit Hash]
+    E --> F[Move Files to BOT Folder<br/>Assign T1]
     F --> G[BOT Overnight Processing]
-    G --> H["BOT Morning Report<br>Completed | Exceptions | Pending"]
+    G --> H[BOT Morning Report<br/>Completed Exceptions Pending]
     
-    H --> I["Completed Files<br>Move related emails to Completed Folder<br>Assign T2"]
-    H --> J["Business Exceptions<br>Keep emails in Inbox<br>Assign T2"]
-    H --> K["Pending<br>No movement"]
+    H --> I[Completed Files<br/>Move emails to Completed<br/>Assign T2]
+    H --> J[Business Exceptions<br/>Keep emails in Inbox<br/>Assign T2]
+    H --> K[Pending<br/>No movement]
     
-    I --> L["CMS Intake Validation<br>Assign T3"]
+    B --> I
+    
+    I --> L[CMS Intake Validation<br/>Assign T3]
     J --> L
-    L --> M[Final TAT + Accurate Counts]
+    L --> M[Final TAT and Accurate Counts]
         </div>
+
+        <hr>
+
+        <h2>4a. Administrator-Specific Workflows</h2>
+        <p>Each administrator has a slightly different workflow for delivering claim files:</p>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Administrator</th>
+                    <th>Claim Files Delivery</th>
+                    <th>Email Notifications</th>
+                    <th>Special Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Cigna</strong></td>
+                    <td>Email attachments</td>
+                    <td>N/A (email IS the claim)</td>
+                    <td>Files must be extracted from email, macro unlocks Excel files</td>
+                </tr>
+                <tr>
+                    <td><strong>UMR</strong></td>
+                    <td>FTP</td>
+                    <td>Yes (auto-moved to completed)</td>
+                    <td>Standard FTP workflow</td>
+                </tr>
+                <tr>
+                    <td><strong>Meritain</strong></td>
+                    <td>FTP (often large ZIP files with multiple claims)</td>
+                    <td>Yes</td>
+                    <td>ZIP files must be expanded, can contain thousands of files</td>
+                </tr>
+                <tr>
+                    <td><strong>Aetna</strong></td>
+                    <td>FTP</td>
+                    <td>Yes (notification when files drop)</td>
+                    <td>Standard FTP workflow</td>
+                </tr>
+                <tr>
+                    <td><strong>Anthem</strong></td>
+                    <td>FTP</td>
+                    <td>Yes (both broker and anthem notifications)</td>
+                    <td>Multiple notification types</td>
+                </tr>
+                <tr>
+                    <td><strong>Glenavon</strong></td>
+                    <td>FTP</td>
+                    <td>Yes</td>
+                    <td>Standard FTP workflow</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p><strong>Key Takeaway:</strong> For 5 administrators, email notifications are just indicators. For Cigna, the email attachment IS the claim file that needs processing.</p>
 
         <hr>
 
         <h2>5. FileID Strategy (Required for 1:1 Accuracy)</h2>
-        <p>Every claim file receives a stable identifier:</p>
-        <pre><code>&lt;Admin&gt;_&lt;RawFilename&gt;_&lt;YYYYMMDDHHMMSS&gt;_&lt;8CharHash&gt;</code></pre>
+        <p>Every claim file receives a stable identifier with a randomized 10-digit hash:</p>
+        <pre><code>&lt;OriginalFilename&gt;_&lt;10DigitHash&gt;</code></pre>
+        
+        <p><strong>Note:</strong> There is no standard file naming convention across administrators. The 10-digit hash serves as the unique identifier to track each file throughout its lifecycle, regardless of the original naming structure.</p>
 
         <h3>Meritain ZIP Splitting</h3>
-        <pre><code>ZIPID = &lt;Admin&gt;_&lt;ZipName&gt;_&lt;Timestamp&gt;
-ChildID = &lt;ZIPID&gt;_&lt;InnerFileName&gt;_&lt;8CharHash&gt;</code></pre>
+        <pre><code>ZIPID = &lt;ZipName&gt;_&lt;10DigitHash&gt;
+ChildID = &lt;ZIPID&gt;_&lt;InnerFileName&gt;_&lt;10DigitHash&gt;</code></pre>
         <p>Each extracted file becomes its own claim with its own lifecycle.</p>
 
         <hr>
-
-        <h2>6. Detailed Data Flow (Visual)</h2>
-        <div class="mermaid">
-sequenceDiagram
-    participant E as Email Notification
-    participant F as FTP Drop (Claim Files)
-    participant A as Assignment Process
-    participant ID as FileID Generator
-    participant B as BOT Action Folder
-    participant BOT as BOT Overnight
-    participant R as BOT Morning Report
-    participant O as Outlook Sync
-    participant CMS as CMS Intake
-    participant DB as Datastore (T0–T3)
-
-    Note over E: Notification<br>Not a claim
-    F->>A: New claim files detected
-    A->>ID: Create FileID + Timestamp T0
-    ID->>B: Move file to BOT Folder (T1)
-    B->>BOT: BOT processes file
-    BOT->>R: BOT Excel Report (Completed/Exception)
-    R->>DB: Assign T2 for each FileID
-    R->>O: Move Emails<br>Completed → Completed Folder<br>Exceptions → Stay in Inbox
-    CMS->>DB: CMS Load Timestamp (T3)
-    DB->>DB: Calculate TAT (BusinessDays)
-        </div>
 
         <hr>
 
         <h2>7. Inbox Management Rules (Critical)</h2>
         
-        <h3>Night Before:</h3>
+        <h3>The Problem (Current State):</h3>
+        <p>Currently, when 100 files are sent to BOT, the 100 corresponding email notifications are immediately moved to the "Completed" folder. However, if BOT returns 50 as exceptions, those 50 emails are already marked as completed. This creates:</p>
         <ul>
-            <li>Assignment job counts claims</li>
-            <li>Files are moved to BOT Action folder</li>
-            <li>Notification emails remain untouched</li>
+            <li>Inflated "completed" counts (100 shown vs. 50 actually completed)</li>
+            <li>Mismatch between email counts and actual claims processed</li>
         </ul>
 
-        <h3>Morning BOT Report:</h3>
+        <h3>The Solution (New Workflow):</h3>
+        
+        <h4>Night Before (3:30 PM or later):</h4>
         <ul>
-            <li><strong>Completed</strong> → move matching notifications to Completed folder</li>
-            <li><strong>Exceptions</strong> → leave notifications in Inbox</li>
-            <li><strong>Pending</strong> → no movement</li>
+            <li>Assignment job runs and counts claims from FTP/Email</li>
+            <li>Files are moved to BOT Action folder with T1 timestamp</li>
+            <li><strong>Notification emails remain untouched in Inbox</strong></li>
         </ul>
+
+        <h4>Morning (After BOT Report - approximately 6:30 AM):</h4>
+        <ul>
+            <li><strong>Completed</strong> → Move ONLY the number of emails that match completed count to Completed folder</li>
+            <li><strong>Exceptions</strong> → Leave notification emails in Inbox (these represent real work to be done)</li>
+            <li><strong>Pending</strong> → No movement until BOT processes them</li>
+        </ul>
+
+        <h3>Short-Term Manual Solution:</h3>
+        <p>Until automation is implemented:</p>
+        <ol>
+            <li>Review BOT morning report (e.g., "15 files sent, 7 completed, 8 exceptions")</li>
+            <li>Manually move exactly 7 emails to Completed folder (doesn't matter which 7)</li>
+            <li>Leave 8 emails in Inbox to represent the 8 exceptions needing manual work</li>
+            <li>Run mailbox count AFTER moving emails (not before)</li>
+        </ol>
 
         <h3>Results:</h3>
         <ul>
@@ -267,21 +330,24 @@ sequenceDiagram
         
         <h3>Count 1 — Claims Received (Accurate)</h3>
         <ul>
-            <li><strong>Source:</strong> FTP → expanded ZIP contents → FileIDs</li>
-            <li>Emails irrelevant.</li>
+            <li><strong>Source for 5 administrators:</strong> FTP → expanded ZIP contents → FileIDs</li>
+            <li><strong>Source for Cigna:</strong> Email attachments extracted → FileIDs</li>
+            <li>Email notifications are irrelevant for counting (except Cigna where email IS the claim)</li>
         </ul>
 
         <h3>Count 2 — Claims Completed (Accurate)</h3>
         <p><strong>Source:</strong></p>
         <ul>
-            <li>BOT completed files</li>
-            <li>Exceptions are NOT counted</li>
+            <li>BOT completed files (from morning report)</li>
+            <li>Exceptions are NOT counted as completed</li>
             <li>CMS validation ensures final completion</li>
+            <li><strong>Critical:</strong> Do not count based on email folder moves - only BOT report results</li>
         </ul>
 
         <h3>Count 3 — Email Notifications Received</h3>
         <ul>
-            <li>Useful for trend analysis, but NOT claim volume.</li>
+            <li>Useful for trend analysis, but NOT claim volume</li>
+            <li>Exception: For Cigna, email count = claim count</li>
         </ul>
 
         <hr>
@@ -324,21 +390,21 @@ sequenceDiagram
         <h2>10. Complete Lifecycle Diagram</h2>
         <div class="mermaid">
 flowchart LR
-    A[FTP Claim Files] --> B[Assign FileID + T0]
-    B --> C["Move to BOT Action Folder<br>Assign T1"]
+    A[FTP Claim Files] --> B[Assign FileID and T0]
+    B --> C[Move to BOT Folder<br/>Assign T1]
     C --> D[BOT Processing Overnight]
     D --> E[BOT Morning Report]
     
-    E --> F["Completed<br>Assign T2"]
-    F --> G[Move related emails to Completed Folder]
+    E --> F[Completed<br/>Assign T2]
+    F --> G[Move emails to Completed]
     
-    E --> H["Exceptions<br>Assign T2"]
+    E --> H[Exceptions<br/>Assign T2]
     H --> I[Keep emails in Inbox]
     
-    F --> J["CMS Load Validation<br>Assign T3"]
+    F --> J[CMS Load Validation<br/>Assign T3]
     H --> J
     
-    J --> K["1:1 TAT Calculation<br>(BusinessDays T0→T3)"]
+    J --> K[TAT Calculation<br/>T0 to T3]
         </div>
 
         <hr>
@@ -361,43 +427,62 @@ flowchart LR
         <div class="phase">
             <h3>Phase 1 — Foundation</h3>
             <ul>
-                <li>FileID generator</li>
-                <li>FTP extraction</li>
-                <li>ZIP expansion</li>
+                <li>FileID generator with 10-digit hash</li>
+                <li>FTP extraction workflow</li>
+                <li>Email extraction workflow (Cigna-specific)</li>
+                <li>ZIP expansion (Meritain-specific)</li>
                 <li>Datastore creation</li>
             </ul>
         </div>
 
         <div class="phase">
-            <h3>Phase 2 — BOT Automation</h3>
+            <h3>Phase 2 — BOT Integration</h3>
             <ul>
                 <li>BOT report parser</li>
                 <li>T1 / T2 tracking</li>
                 <li>Exception flagging</li>
+                <li>Automated file movement to BOT folders</li>
             </ul>
         </div>
 
         <div class="phase">
-            <h3>Phase 3 — Outlook Automation</h3>
+            <h3>Phase 3 — Email Automation</h3>
             <ul>
-                <li>Email matching + movement script</li>
+                <li>Email matching logic (FileID to email)</li>
+                <li>Automated email movement based on BOT results</li>
+                <li>Mailbox count automation</li>
+                <li>Administrator-specific email handling (especially Cigna)</li>
             </ul>
         </div>
 
         <div class="phase">
-            <h3>Phase 4 — Full Picture TAT</h3>
+            <h3>Phase 4 — TAT Engine</h3>
             <ul>
-                <li>T0–T3 population</li>
-                <li>Business-day logic</li>
+                <li>T0–T3 timestamp population</li>
+                <li>Business-day calculation logic</li>
+                <li>Manual processing time tracking</li>
+                <li>Administrator-level TAT breakdowns</li>
             </ul>
         </div>
 
         <div class="phase">
-            <h3>Phase 5 — Reporting</h3>
+            <h3>Phase 5 — Reporting & Monitoring</h3>
             <ul>
-                <li>Daily CSV</li>
-                <li>Dashboard</li>
-                <li>Other KPIs</li>
+                <li>Daily automated reports (CSV/Excel)</li>
+                <li>Real-time dashboard</li>
+                <li>BOT efficiency KPIs</li>
+                <li>Exception backlog monitoring</li>
+                <li>Administrator performance comparison</li>
+            </ul>
+        </div>
+        
+        <div class="phase" style="background-color: #fff3cd; border-left: 4px solid #ffc107;">
+            <h3>⚠️ Critical Success Factors</h3>
+            <ul>
+                <li><strong>Timing:</strong> Emails must not be moved until AFTER BOT report is received</li>
+                <li><strong>Mailbox Access:</strong> Python scripts need permission to connect to Outlook mailbox</li>
+                <li><strong>File Handling:</strong> Cigna files must be extracted from email before assignment</li>
+                <li><strong>Accuracy First:</strong> Manual interim solution needed while automation is being built</li>
             </ul>
         </div>
     </div>
